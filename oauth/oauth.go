@@ -93,6 +93,9 @@ func AuthenticateRequest(request *http.Request) *errors.RestErr {
 
 	at, err := getAccessToken(accessTokenID)
 	if err != nil {
+		if err.Status == http.StatusNotFound {
+			return nil
+		}
 		return err
 	}
 
@@ -115,7 +118,7 @@ func getAccessToken(
 	accessTokenID string,
 ) (*accessToken, *errors.RestErr) {
 	resp := oauthRestClient.Get(
-		fmt.Sprintf("oauth/access_token/%s", accessTokenID),
+		fmt.Sprintf("/oauth/access_token/%s", accessTokenID),
 	)
 	if resp == nil || resp.Response == nil {
 		return nil, errors.NewInternalServerError(
