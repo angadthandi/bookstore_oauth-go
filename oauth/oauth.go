@@ -2,13 +2,15 @@ package oauth
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/angadthandi/bookstore_oauth-go/oauth/errors"
+	// "github.com/angadthandi/bookstore_oauth-go/oauth/errors"
+	"github.com/angadthandi/bookstore_utils-go/rest_errors"
 	"github.com/mercadolibre/golang-restclient/rest"
 )
 
@@ -77,7 +79,7 @@ func GetClientID(request *http.Request) int64 {
 	return clientID
 }
 
-func AuthenticateRequest(request *http.Request) *errors.RestErr {
+func AuthenticateRequest(request *http.Request) rest_errors.RestErr {
 	if request == nil {
 		return nil
 	}
@@ -93,7 +95,7 @@ func AuthenticateRequest(request *http.Request) *errors.RestErr {
 
 	at, err := getAccessToken(accessTokenID)
 	if err != nil {
-		if err.Status == http.StatusNotFound {
+		if err.Status() == http.StatusNotFound {
 			return nil
 		}
 		return err
@@ -116,32 +118,32 @@ func cleanRequest(request *http.Request) {
 
 func getAccessToken(
 	accessTokenID string,
-) (*accessToken, *errors.RestErr) {
+) (*accessToken, rest_errors.RestErr) {
 	resp := oauthRestClient.Get(
 		fmt.Sprintf("/oauth/access_token/%s", accessTokenID),
 	)
 	if resp == nil || resp.Response == nil {
-		return nil, errors.NewInternalServerError(
-			InvalidRestClientErrMsg,
+		return nil, rest_errors.NewInternalServerError(
+			InvalidRestClientErrMsg, errors.New("Get error"),
 		)
 	}
 
 	if resp.StatusCode > 299 {
-		var restErr errors.RestErr
+		var restErr rest_errors.RestErr
 		err := json.Unmarshal(resp.Bytes(), &restErr)
 		if err != nil {
-			return nil, errors.NewInternalServerError(
-				InvalidErrorInterfaceErrMsg,
+			return nil, rest_errors.NewInternalServerError(
+				InvalidErrorInterfaceErrMsg, errors.New("json unmarshal error"),
 			)
 		}
-		return nil, &restErr
+		return nil, restErr
 	}
 
 	var at accessToken
 	err := json.Unmarshal(resp.Bytes(), &at)
 	if err != nil {
-		return nil, errors.NewInternalServerError(
-			UnmarshalErrMsg,
+		return nil, rest_errors.NewInternalServerError(
+			UnmarshalErrMsg, errors.New("json unmarshal error"),
 		)
 	}
 
